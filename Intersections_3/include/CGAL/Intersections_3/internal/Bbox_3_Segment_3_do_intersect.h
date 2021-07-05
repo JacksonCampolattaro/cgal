@@ -135,8 +135,8 @@ namespace internal {
                           const BFT& bxmin, const BFT& bymin, const BFT& bzmin,
                           const BFT& bxmax, const BFT& bymax, const BFT& bzmax)
   {
-    // If the entire line segment is contained by the bbox, it obviously intersects
-    /* disabled for branchless operation
+    // If the entire line segment is contained by the bbox, it intersects
+    // TODO Remove for branchless operation
     if( ( (px >= bxmin) && (px <= bxmax) &&
           (py >= bymin) && (py <= bymax) &&
           (pz >= bzmin) && (pz <= bzmax) ) ||
@@ -145,9 +145,6 @@ namespace internal {
           (qz >= bzmin) && (qz <= bzmax) ) ) {
       return true;
     }
-     */
-
-    // TODO: make branchless
 
     // The following code encode t1 and t2 by:
     //    t1 = tmin/dmin
@@ -159,47 +156,80 @@ namespace internal {
     // -----------------------------------
     typedef typename Coercion_traits<double,FT>::Type CFT;
     CFT dmin, tmin, tmax, dmax;
+
+    // If the ray points to the right
     if ( qx >= px )
     {
+      // There is no intersection if the ray starts on the right of the box (and doesn't extend past its origin)
+      // TODO Remove for branchless operation
       if(bounded_0 && px > bxmax) return false; // segment on the right of bbox
+
+      // There is no intersection if the ray ends on the left of the box (and doesn't extend past its terminus)
+      // TODO Remove for branchless operation
       if(bounded_1 && qx < bxmin) return false; // segment on the left of bbox
 
+      // If the ray does not extend past the right of the box
       if(bounded_1 && bxmax > qx) {
+
+        // Set the maximum t bounds to the full extension of the ray
         tmax = 1;
+        // todo what is dmax used for?
         dmax = 1;
+
       } else {
+
+        // Otherwise, shorten the maximum t bounds to the point where it exits the box
         tmax = bxmax - px;
+        // todo what is dmax used for?
         dmax = qx - px;
       }
 
+      // Set the minimum t bounds to be the length along the ray where it first encounters the box
       tmin = bxmin - px;
+      // todo what is dmin used for?
       dmin = qx - px;
     }
     else
     {
+      // Otherwise, we know the ray points to the left
+
+      // There is no intersection if the ray ends on the right of the box (and doesn't extend past its terminus)
       // TODO Remove for branchless operation
       if(bounded_1 && qx > bxmax) return false; // segment on the right of bbox
+
+      // There is no intersection if the ray starts on the left of the box (and doesn't extend past its origin)
+      // TODO Remove for branchless operation
       if(bounded_0 && px < bxmin) return false; // segment on the left of bbox
 
+      // If the ray does not extend past the left of the box
       if(bounded_1 && bxmin < qx) {
+
+        // Set the maximum t bounds to the full extension of the ray
         tmax = 1;
+        // todo what is dmax used for?
         dmax = 1;
+
       } else {
+
+        // Otherwise, shorten the maximum t bounds to the point where it exits the box
         tmax = px - bxmin;
+        // todo what is dmax used for?
         dmax = px - qx;
       }
 
+      // Set the minimum t bounds to be the length along the ray where it first encounters the box
       tmin = px - bxmax;
+      // todo what is dmin used for?
       dmin = px - qx;
     }
 
+    // Enforce 0 bounds by making sure tmin >= 0
     if(bounded_0) tmin = (CGAL::max)(CFT(0), tmin);
 
-    // If the query is vertical for x, then check its x-coordinate is in
-    // the x-slab.
-    if( (px == qx) &&  // <=> (dmin == 0)
-        (! (bounded_0 && bounded_1) ) ) // do not check for a segment
+    // Special case: if we have an infinite ray and it has no x-angle, it's easy to check that it doesn't intersect
+    if( (px == qx) && (! (bounded_0 && bounded_1) ) )
     {
+      // If the ray starts with an x-value outside the box, then it must not intersect with the box
       // TODO Remove for branchless operation
       if(px > bxmax || px < bxmin) return false;
       // Note: for a segment the condition has already been tested by the two
@@ -210,8 +240,11 @@ namespace internal {
     // is a NaN. But the case with NaNs is treated as if the interval
     // [t1, t2] was ]-inf, +inf[.
 
+    // d bounds should never be negative
     CGAL_assertion(dmin >= 0);
     CGAL_assertion(dmax >= 0);
+
+    // If we're bounded by the start of the ray, t bounds should never be negative
     if(bounded_0) {
       CGAL_assertion(tmin >= 0);
       CGAL_assertion(tmax >= 0);
@@ -221,6 +254,7 @@ namespace internal {
     // -----------------------------------
     // treat y coord
     // -----------------------------------
+    // (Logic is the same as X)
     CFT dymin, tymin, tymax, dymax;
     if ( qy >= py )
     {
@@ -283,6 +317,7 @@ namespace internal {
     // -----------------------------------
     // treat z coord
     // -----------------------------------
+    // (Logic is the same as X)
     CFT dzmin, tzmin, tzmax, dzmax;
     if ( qz >= pz )
     {
@@ -342,6 +377,7 @@ namespace internal {
     }
 
 
+    // Use this custom type to determine our error bounds
     typedef Do_intersect_bbox_segment_aux_is_greater
       <CFT,
        bounded_0,
@@ -350,66 +386,86 @@ namespace internal {
     typedef typename Is_greater::result_type Is_greater_value;
     Is_greater is_greater;
 
+    // Find the largest input values that will be used (each of these updates the internal values if larger)
     is_greater.register_new_input_values(tmin, dmin);
     is_greater.register_new_input_values(tymin, dymin);
     is_greater.register_new_input_values(tmax, dmax);
     is_greater.register_new_input_values(tymax, dymax);
 
+    // Calculate the appropriate margin of error given the previous inputs
     is_greater.compute_new_error_bound();
+
+    // If the values are extremely large or small, the intersection cannot be determined with exactness guarantees
     // TODO Remove for branchless operation
     if(is_greater.bound_overflow() || is_greater.value_might_underflow())
       return Is_greater::uncertain();
 
-    // If t1 > tymax/dymax || tymin/dymin > t2, return false.
+    // If the ray has nonzero x and y angle
     if( py != qy && px != qx ) { // dmin > 0, dymax >0, dmax > 0, dymin > 0
+
+      // If the ymin could be greater than the ymax, the ray can't be proved to intersect
+      // todo why is this repeated in this way?
       // TODO Remove for branchless operation
       const Is_greater_value b1 = is_greater(dymax* tmin,  dmin*tymax);
       if(possibly(b1)) return !b1; // if(is_greater) return false; // or uncertain
+      // TODO Remove for branchless operation
       const Is_greater_value b2 = is_greater( dmax*tymin, dymin* tmax);
       if(possibly(b2)) return !b2;
     }
 
+    // If the ray has nonzero y angle, but no x angle, and we're sure y's min is greater than the current min bound
+    // TODO Maybe this could be replaced with a call to CGAL::max?
     Is_greater_value b = Is_greater_value();
-    // If tymin/dymin > t1, set t1 = tymin/dymin.
-    if( (px == qx) || // <=> (dmin == 0)
-        ( (py != qy) && // <=> (dymin > 0)
+    if( (px == qx) || ( (py != qy) &&
           certainly(b = is_greater( dmin*tymin, dymin* tmin)) ) )
     {
+      // Update bounds to y's min
       tmin = tymin;
       dmin = dymin;
     }
+
+    // If we're uncertain about whether our bounds should shrink, we can't give a certain answer
+    // todo Is this really true? It seems like taking the smaller bounds should be okay.
     // TODO Remove for branchless operation
     if(is_indeterminate(b)) return b; // Note that the default-constructed
                                       // Is_greater_value cannot be
                                       // indeterminate.
 
     // If tymax/dymax < t2, set t2 = tymax/dymax.
-    if( (px == qx) || // <=> (dmax > 0)
-        ( (py != qy) && // <=> dymax > 0
+    // If the ray has nonzero y angle, but no x angle, and we're sure y's max is less than the current max bound
+    if( (px == qx) || ( (py != qy) &&
           certainly(b = is_greater(dymax* tmax,  dmax*tymax)) ) )
     {
+      // Update bounds to y's max
       tmax = tymax;
       dmax = dymax;
     }
+
+    // If we're uncertain about whether our bounds should shrink, we can't give a certain answer
+    // todo Is this really true? It seems like taking the smaller bounds should be okay.
     // TODO Remove for branchless operation
     if(is_indeterminate(b)) return b;
 
+    // Our bounds should not be negative
     CGAL_assertion(dmin >= 0);
     CGAL_assertion(dmax >= 0);
 
-    // If t1 > tzmax || tzmin > t2, return false.
-    if( (px != qx ||
-         py != qy ) &&
-        (pz != qz) ) // dmin > 0, dmax > 0, dzmax > 0, dzmin > 0
+    // If we have a nonzero angle in the x or y directions as well as z
+    if( (px != qx || py != qy ) &&
+        (pz != qz) )
     {
+      // Update our margin of error
       is_greater.register_new_input_values(tzmin, dzmin);
       is_greater.register_new_input_values(tzmax, dzmax);
-
       is_greater.compute_new_error_bound();
+
+      // If our z bounds are too large or small, we can't give a certain answer
       // TODO Remove for branchless operation
       if(is_greater.bound_overflow() || is_greater.value_might_underflow())
         return Is_greater::uncertain();
 
+      // If the zmin could be greater than the zmax, the ray can't be proved to intersect
+      // todo why is this repeated in this way?
       // TODO Remove for branchless operation
       const Is_greater_value b1 = is_greater(dzmax* tmin,  dmin*tzmax);
       if(possibly(b1)) return !b1; // if(is_greater) return false; // or uncertain
@@ -417,7 +473,8 @@ namespace internal {
       if(possibly(b2)) return !b2; // if(is_greater) return false; // or uncertain
     }
 
-    // TODO For the function to be branchless, this must be the only return
+    // If none of our previous checks eliminated the possibility, than the ray must intersect
+    // TODO For the function to be branchless, this must be location of the only return
     return true;
   }
 
