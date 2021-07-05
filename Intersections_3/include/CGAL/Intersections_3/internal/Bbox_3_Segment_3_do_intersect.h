@@ -135,6 +135,8 @@ namespace internal {
                           const BFT& bxmin, const BFT& bymin, const BFT& bzmin,
                           const BFT& bxmax, const BFT& bymax, const BFT& bzmax)
   {
+    // If the entire line segment is contained by the bbox, it obviously intersects
+    /* disabled for branchless operation
     if( ( (px >= bxmin) && (px <= bxmax) &&
           (py >= bymin) && (py <= bymax) &&
           (pz >= bzmin) && (pz <= bzmax) ) ||
@@ -143,6 +145,9 @@ namespace internal {
           (qz >= bzmin) && (qz <= bzmax) ) ) {
       return true;
     }
+     */
+
+    // TODO: make branchless
 
     // The following code encode t1 and t2 by:
     //    t1 = tmin/dmin
@@ -172,6 +177,7 @@ namespace internal {
     }
     else
     {
+      // TODO Remove for branchless operation
       if(bounded_1 && qx > bxmax) return false; // segment on the right of bbox
       if(bounded_0 && px < bxmin) return false; // segment on the left of bbox
 
@@ -194,6 +200,7 @@ namespace internal {
     if( (px == qx) &&  // <=> (dmin == 0)
         (! (bounded_0 && bounded_1) ) ) // do not check for a segment
     {
+      // TODO Remove for branchless operation
       if(px > bxmax || px < bxmin) return false;
       // Note: for a segment the condition has already been tested by the two
       // previous tests tmax<0 || tmin>dmin (with dmin==0).
@@ -217,6 +224,7 @@ namespace internal {
     CFT dymin, tymin, tymax, dymax;
     if ( qy >= py )
     {
+      // TODO Remove for branchless operation
       if(bounded_0 && py > bymax) return false; // segment on the right of bbox
       if(bounded_1 && qy < bymin) return false; // segment on the left of bbox
 
@@ -233,6 +241,7 @@ namespace internal {
     }
     else
     {
+      // TODO Remove for branchless operation
       if(bounded_1 && qy > bymax) return false; // segment on the right of bbox
       if(bounded_0 && py < bymin) return false; // segment on the left of bbox
 
@@ -255,6 +264,7 @@ namespace internal {
     if( (py == qy) &&  // <=> (dmin == 0)
         (! (bounded_0 && bounded_1) ) ) // do not check for a segment
     {
+      // TODO Remove for branchless operation
       if(py > bymax || py < bymin) return false;
     }
 
@@ -276,6 +286,7 @@ namespace internal {
     CFT dzmin, tzmin, tzmax, dzmax;
     if ( qz >= pz )
     {
+      // TODO Remove for branchless operation
       if(bounded_0 && pz > bzmax) return false; // segment on the right of bbox
       if(bounded_1 && qz < bzmin) return false; // segment on the left of bbox
 
@@ -292,6 +303,7 @@ namespace internal {
     }
     else
     {
+      // TODO Remove for branchless operation
       if(bounded_1 && qz > bzmax) return false; // segment on the right of bbox
       if(bounded_0 && pz < bzmin) return false; // segment on the left of bbox
 
@@ -314,6 +326,7 @@ namespace internal {
     if( (pz == qz) &&  // <=> (dmin == 0)
         (! (bounded_0 && bounded_1) ) ) // do not check for a segment
     {
+      // TODO Remove for branchless operation
       if(pz > bzmax || pz < bzmin) return false;
     }
 
@@ -343,11 +356,13 @@ namespace internal {
     is_greater.register_new_input_values(tymax, dymax);
 
     is_greater.compute_new_error_bound();
+    // TODO Remove for branchless operation
     if(is_greater.bound_overflow() || is_greater.value_might_underflow())
       return Is_greater::uncertain();
 
     // If t1 > tymax/dymax || tymin/dymin > t2, return false.
     if( py != qy && px != qx ) { // dmin > 0, dymax >0, dmax > 0, dymin > 0
+      // TODO Remove for branchless operation
       const Is_greater_value b1 = is_greater(dymax* tmin,  dmin*tymax);
       if(possibly(b1)) return !b1; // if(is_greater) return false; // or uncertain
       const Is_greater_value b2 = is_greater( dmax*tymin, dymin* tmax);
@@ -363,6 +378,7 @@ namespace internal {
       tmin = tymin;
       dmin = dymin;
     }
+    // TODO Remove for branchless operation
     if(is_indeterminate(b)) return b; // Note that the default-constructed
                                       // Is_greater_value cannot be
                                       // indeterminate.
@@ -375,6 +391,7 @@ namespace internal {
       tmax = tymax;
       dmax = dymax;
     }
+    // TODO Remove for branchless operation
     if(is_indeterminate(b)) return b;
 
     CGAL_assertion(dmin >= 0);
@@ -389,14 +406,18 @@ namespace internal {
       is_greater.register_new_input_values(tzmax, dzmax);
 
       is_greater.compute_new_error_bound();
+      // TODO Remove for branchless operation
       if(is_greater.bound_overflow() || is_greater.value_might_underflow())
         return Is_greater::uncertain();
 
+      // TODO Remove for branchless operation
       const Is_greater_value b1 = is_greater(dzmax* tmin,  dmin*tzmax);
       if(possibly(b1)) return !b1; // if(is_greater) return false; // or uncertain
       const Is_greater_value b2 = is_greater( dmax*tzmin, dzmin* tmax);
       if(possibly(b2)) return !b2; // if(is_greater) return false; // or uncertain
     }
+
+    // TODO For the function to be branchless, this must be the only return
     return true;
   }
 
