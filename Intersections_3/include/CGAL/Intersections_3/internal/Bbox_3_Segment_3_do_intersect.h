@@ -452,7 +452,7 @@ namespace CGAL {
                       bounded_0,
                       use_static_filters
               >::result_type
-      do_intersect_bbox_segment_aux_new(
+      do_intersect_bbox_segment_aux(
               const FT &px, const FT &py, const FT &pz,
               const FT &qx, const FT &qy, const FT &qz,
               const BFT &bxmin, const BFT &bymin, const BFT &bzmin,
@@ -460,9 +460,12 @@ namespace CGAL {
 
         typedef typename Coercion_traits<double, FT>::Type CFT;
 
-        const FT iqx = 1.0 / qx;
-        const FT iqy = 1.0 / qy;
-        const FT iqz = 1.0 / qz;
+        const CFT rmin = bounded_0 ? 0 : std::numeric_limits<CFT>::min();
+        const CFT rmax = bounded_1 ? 1 : std::numeric_limits<CFT>::max();
+
+        const FT iqx = 1.0 / (qx - px);
+        const FT iqy = 1.0 / (qy - py);
+        const FT iqz = 1.0 / (qz - pz);
 
         const BFT bx[] = {bxmin, bxmax};
         const BFT by[] = {bymin, bymax};
@@ -485,54 +488,37 @@ namespace CGAL {
         CFT max = std::min({xmax, ymax, zmax});
 
         // The ray intercepts if this region overlaps with the interval provided
-        return (max >= min) &&            // Check if there is any overlap at all
-               !(bounded_0 && max < 0) && // Check if the overlap is outside the ray (before the start)
-               !(bounded_1 && min > 1);   // Check if the overlap is outside the ray (after the end)
-      }
+        Uncertain<bool> new_result =
+                (max >= min) &&            // Check if there is any overlap at all
+                !(max < rmin) && // Check if the overlap is outside the ray (before the start)
+                !(min > rmax);   // Check if the overlap is outside the ray (after the end)
 
-      template<typename FT,
-              typename BFT,
-              bool bounded_0,
-              bool bounded_1,
-              bool use_static_filters>
-      inline
-      typename Do_intersect_bbox_segment_aux_is_greater
-              <
-                      FT,
-                      bounded_0,
-                      use_static_filters
-              >::result_type
-      do_intersect_bbox_segment_aux(
-              const FT &px, const FT &py, const FT &pz,
-              const FT &qx, const FT &qy, const FT &qz,
-              const BFT &bxmin, const BFT &bymin, const BFT &bzmin,
-              const BFT &bxmax, const BFT &bymax, const BFT &bzmax) {
 
-        // Calculate the result using the old approach
-        auto old_result = do_intersect_bbox_segment_aux_old<FT, BFT, bounded_0, bounded_1, use_static_filters>(
-                px, py, pz,
-                qx, qy, qz,
-                bxmin, bymin, bzmin,
-                bxmax, bymax, bzmax
-        );
+//        // Calculate the result using the old approach
+//        auto old_result = do_intersect_bbox_segment_aux_old<FT, BFT, bounded_0, bounded_1, use_static_filters>(
+//                px, py, pz,
+//                qx, qy, qz,
+//                bxmin, bymin, bzmin,
+//                bxmax, bymax, bzmax
+//        );
+//
+//        std::cout << (is_certain(old_result) ? (int) old_result : 2) << " "
+//                  << (is_certain(new_result) ? (int) new_result : 2) << std::endl;
+//
+//        // Check that the two results are the same
+//        CGAL_assertion_msg(
+//                possibly(old_result) == possibly(new_result),
+//                "The new ray-bbox intersection function produced an incorrect result!"
+//        );
+//
+//        CGAL_assertion_msg(
+//                is_certain(old_result) == is_certain(new_result),
+//                "The new ray-bbox intersection function produced a result with the wrong level of certainty!"
+//        );
 
-        // Calculate the result using the new approach
-        auto new_result = do_intersect_bbox_segment_aux_new<FT, BFT, bounded_0, bounded_1, use_static_filters>(
-                px, py, pz,
-                qx, qy, qz,
-                bxmin, bymin, bzmin,
-                bxmax, bymax, bzmax
-        );
-
-        // Check that the two results are the same
-        CGAL_assertion_msg(
-                old_result == new_result || is_indeterminate(old_result),
-                "The new ray-bbox intersection function produced an incorrect result!"
-        );
-
-        // Use the new result
         return new_result;
       }
+
 
       template<typename FT,
               bool bounded_0,
