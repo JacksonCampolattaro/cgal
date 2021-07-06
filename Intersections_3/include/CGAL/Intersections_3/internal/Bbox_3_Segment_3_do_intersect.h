@@ -458,41 +458,31 @@ namespace CGAL {
               const BFT &bxmin, const BFT &bymin, const BFT &bzmin,
               const BFT &bxmax, const BFT &bymax, const BFT &bzmax) {
 
-        typedef typename Coercion_traits<double, FT>::Type CFT;
-
-        const CFT rmin = bounded_0 ? 0 : std::numeric_limits<CFT>::min();
-        const CFT rmax = bounded_1 ? 1 : std::numeric_limits<CFT>::max();
-
-        const FT iqx = 1.0 / (qx - px);
-        const FT iqy = 1.0 / (qy - py);
-        const FT iqz = 1.0 / (qz - pz);
-
         const BFT bx[] = {bxmin, bxmax};
         const BFT by[] = {bymin, bymax};
         const BFT bz[] = {bzmin, bzmax};
 
-        const int sx = iqx < 0;
-        const int sy = iqy < 0;
-        const int sz = iqz < 0;
+        const int sx = qx < 0;
+        const int sy = qy < 0;
+        const int sz = qz < 0;
 
         // Determine bounds x, y, and z
-        CFT xmin = (bx[sx] - px) * iqx;
-        CFT xmax = (bx[1 - sx] - px) * iqx;
-        CFT ymin = (by[sy] - py) * iqy;
-        CFT ymax = (by[1 - sy] - py) * iqy;
-        CFT zmin = (bz[sz] - pz) * iqz;
-        CFT zmax = (bz[1 - sz] - pz) * iqz;
+        FT xmin = (bx[sx] - px) / (qx - px);
+        FT xmax = (bx[1 - sx] - px) / (qx - px);
+        FT ymin = (by[sy] - py) / (qy - py);
+        FT ymax = (by[1 - sy] - py) / (qy - py);
+        FT zmin = (bz[sz] - pz) / (qz - pz);
+        FT zmax = (bz[1 - sz] - pz) / (qz - pz);
 
         // Determine the bounds of the overlapping region
-        CFT min = std::max({xmin, ymin, zmin});
-        CFT max = std::min({xmax, ymax, zmax});
+        FT min = std::max({xmin, ymin, zmin});
+        FT max = std::min({xmax, ymax, zmax});
 
         // The ray intercepts if this region overlaps with the interval provided
         Uncertain<bool> new_result =
                 (max >= min) &&            // Check if there is any overlap at all
-                !(max < rmin) && // Check if the overlap is outside the ray (before the start)
-                !(min > rmax);   // Check if the overlap is outside the ray (after the end)
-
+                !(bounded_0 && max < 0) && // Check if the overlap is outside the ray (before the start)
+                !(bounded_1 && min > 1);   // Check if the overlap is outside the ray (after the end)
 
 //        // Calculate the result using the old approach
 //        auto old_result = do_intersect_bbox_segment_aux_old<FT, BFT, bounded_0, bounded_1, use_static_filters>(
