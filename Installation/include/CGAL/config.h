@@ -36,6 +36,11 @@
 #  define WIN64
 #endif
 
+#ifdef _MSC_VER
+#define _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING 1
+#define _SILENCE_CXX17_OLD_ALLOCATOR_MEMBERS_DEPRECATION_WARNING 1
+#endif
+
 #ifdef CGAL_INCLUDE_WINDOWS_DOT_H
 // Mimic users including this file which defines min max macros
 // and other names leading to name clashes
@@ -101,6 +106,10 @@
 // <boost/type_traits/detail/has_postfix_operator.hpp> fails as well
 #  define BOOST_TT_HAS_POST_DECREMENT_HPP_INCLUDED
 #  define BOOST_TT_HAS_POST_INCREMENT_HPP_INCLUDED
+//work around for moc bug : https://bugreports.qt.io/browse/QTBUG-80990
+#if defined(CGAL_LINKED_WITH_TBB)
+#undef CGAL_LINKED_WITH_TBB
+#endif
 #endif
 
 // Macro used by Boost Parameter. Mesh_3 needs at least 12, before the
@@ -150,9 +159,6 @@
 
 #if CGAL_HEADER_ONLY
 #  include <CGAL/internal/enable_third_party_libraries.h>
-#  if(BOOST_MSVC)
-#    include <CGAL/MSVC_compiler_config.h>
-#  endif
 #else
 #  include <CGAL/compiler_config.h>
 #endif
@@ -287,6 +293,14 @@
 // Same for C++14.
 #if __cplusplus >= 201402L || _MSVC_LANG >= 201402L
 #  define CGAL_CXX14 1
+#endif
+// Same for C++17
+#if __cplusplus >= 201703L || _MSVC_LANG >= 201703L
+#  define CGAL_CXX17 1
+#endif
+// Same for C++20
+#if __cplusplus >= 202002L || _MSVC_LANG >= 202002L
+#  define CGAL_CXX20 1
 #endif
 
 #if defined(BOOST_NO_CXX11_HDR_FUNCTIONAL) || BOOST_VERSION < 105000
@@ -452,9 +466,9 @@ using std::max;
 
 //-------------------------------------------------------------------//
 // Is Geomview usable ?
-#if !defined(_MSC_VER) && !defined(__MINGW32__)
-#  define CGAL_USE_GEOMVIEW
-#endif
+//#if !defined(_MSC_VER) && !defined(__MINGW32__)
+//#  define CGAL_USE_GEOMVIEW
+//#endif
 
 
 //-------------------------------------------------------------------//
@@ -479,7 +493,7 @@ using std::max;
 // Macros to detect features of clang. We define them for the other
 // compilers.
 // See http://clang.llvm.org/docs/LanguageExtensions.html
-// See also http://en.cppreference.com/w/cpp/experimental/feature_test
+// See also https://en.cppreference.com/w/cpp/experimental/feature_test
 #ifndef __has_feature
   #define __has_feature(x) 0  // Compatibility with non-clang compilers.
 #endif
@@ -503,8 +517,10 @@ using std::max;
 #endif
 
 // Macro to specify a 'unused' attribute.
-#if defined(__GNUG__) || __has_attribute(__unused__)
-#  define CGAL_UNUSED  __attribute__ ((__unused__))
+#if __has_cpp_attribute(maybe_unused)
+#  define CGAL_UNUSED [[maybe_unused]]
+#elif defined(__GNUG__) || __has_attribute(__unused__) // [[maybe_unused]] is C++17
+#  define CGAL_UNUSED __attribute__ ((__unused__))
 #else
 #  define CGAL_UNUSED
 #endif
@@ -512,50 +528,21 @@ using std::max;
 // Macro to trigger deprecation warnings
 #ifdef CGAL_NO_DEPRECATION_WARNINGS
 #  define CGAL_DEPRECATED
+#  define CGAL_DEPRECATED_MSG(msg)
 #  define CGAL_DEPRECATED_UNUSED CGAL_UNUSED
-#elif defined(__GNUC__) || __has_attribute(__deprecated__)
-#  define CGAL_DEPRECATED __attribute__((__deprecated__))
-#if __has_attribute(__unused__)
-#  define CGAL_DEPRECATED_UNUSED __attribute__((__deprecated__, __unused__))
 #else
-#  define CGAL_DEPRECATED_UNUSED __attribute__((__deprecated__))
-#endif
-#elif defined (_MSC_VER) && (_MSC_VER > 1300)
-#  define CGAL_DEPRECATED __declspec(deprecated)
-#  define CGAL_DEPRECATED_UNUSED __declspec(deprecated)
-#else
-#  define CGAL_DEPRECATED
-#  define CGAL_DEPRECATED_UNUSED
-#endif
-
-// Macro to trigger deprecation warnings with a custom message
-#ifdef CGAL_NO_DEPRECATION_WARNINGS
-#  define CGAL_DEPRECATED_MSG(msg)
-#elif defined(__GNUC__) || __has_attribute(__deprecated__)
-#  if BOOST_GCC >= 40500 || __has_attribute(__deprecated__)
-#    define CGAL_DEPRECATED_MSG(msg) __attribute__ ((deprecated(msg)))
-#  else
-#    define CGAL_DEPRECATED_MSG(msg) __attribute__ ((deprecated))
-#  endif
-#elif defined (_MSC_VER) && (_MSC_VER > 1300)
-#  define CGAL_DEPRECATED_MSG(msg) __declspec(deprecated(msg))
-#elif defined(__clang__)
-#  define CGAL_DEPRECATED_MSG(msg) __attribute__ ((deprecated(msg)))
-#else
-#  define CGAL_DEPRECATED_MSG(msg)
+#  define CGAL_DEPRECATED [[deprecated]]
+#  define CGAL_DEPRECATED_MSG(msg) [[deprecated(msg)]]
+#  define CGAL_DEPRECATED_UNUSED [[deprecated]] CGAL_UNUSED
 #endif
 
 // Macro to specify a 'noreturn' attribute.
-#if defined(__GNUG__) || __has_attribute(__noreturn__)
-#  define CGAL_NORETURN  __attribute__ ((__noreturn__))
-#elif defined (_MSC_VER)
-#  define CGAL_NORETURN __declspec(noreturn)
-#else
-#  define CGAL_NORETURN
-#endif
+// (This macro existed in CGAL before we switched to C++11. Let's keep
+// the macro defined for backward-compatibility. That cannot harm.)
+#define CGAL_NORETURN  [[noreturn]]
 
 // Macro to specify [[no_unique_address]] if supported
-#if __has_cpp_attribute(no_unique_address)
+#if CGAL_CXX11 && __has_cpp_attribute(no_unique_address)
 #  define CGAL_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
 #  define CGAL_NO_UNIQUE_ADDRESS
@@ -623,6 +610,7 @@ using std::max;
 
 //
 // Compatibility with CGAL-4.14.
+#ifndef CGAL_NO_DEPRECATED_CODE
 //
 // That is temporary, and will be replaced by a namespace alias, as
 // soon as we can remove cpp11::result_of, and <CGAL/atomic.h> and
@@ -635,6 +623,9 @@ using std::max;
 #  include <unordered_set>
 #  include <unordered_map>
 #  include <functional>
+#  include <thread>
+#  include <chrono>
+#  include <atomic>
 //
 namespace CGAL {
 //
@@ -653,26 +644,38 @@ namespace CGAL {
     using std::is_enum;
     using std::unordered_set;
     using std::unordered_map;
+    using std::atomic;
+    using std::memory_order_relaxed;
+    using std::memory_order_consume;
+    using std::memory_order_acquire;
+    using std::memory_order_release;
+    using std::memory_order_acq_rel;
+    using std::memory_order_seq_cst;
+    using std::atomic_thread_fence;
+    using std::thread;
+
   }
 //
   namespace cpp0x = cpp11;
   using cpp11::array;
   using cpp11::copy_n;
 } // end of the temporary compatibility with CGAL-4.14
-
+#endif // CGAL_NO_DEPRECATED_CODE
 namespace CGAL {
 
 // Typedef for the type of nullptr.
 typedef const void * Nullptr_t;   // Anticipate C++0x's std::nullptr_t
-
+namespace cpp11{
+#if CGAL_CXX20 || __cpp_lib_is_invocable>=201703L
+    template<typename Signature> class result_of;
+    template<typename F, typename... Args>
+    class result_of<F(Args...)> : public std::invoke_result<F, Args...> { };
+#else
+    using std::result_of;
+#endif
+}//namespace cpp11
 } //namespace CGAL
 
-//Support for c++11 noexcept
-#if BOOST_VERSION > 104600 && !defined(BOOST_NO_CXX11_NOEXCEPT) && !defined(BOOST_NO_NOEXCEPT)
-#define CGAL_NOEXCEPT(x) noexcept(x)
-#else
-#define CGAL_NOEXCEPT(x)
-#endif
 
 // The fallthrough attribute
 // See for clang:
@@ -694,12 +697,6 @@ typedef const void * Nullptr_t;   // Anticipate C++0x's std::nullptr_t
 // https://svn.boost.org/trac/boost/ticket/2839
 #if defined(BOOST_MSVC) && BOOST_VERSION < 105600
 #define CGAL_CFG_BOOST_VARIANT_SWAP_BUG 1
-#endif
-
-#ifndef CGAL_NO_ASSERTIONS
-#  define CGAL_NO_ASSERTIONS_BOOL false
-#else
-#  define CGAL_NO_ASSERTIONS_BOOL true
 #endif
 
 #if defined( __INTEL_COMPILER)
@@ -739,6 +736,5 @@ typedef const void * Nullptr_t;   // Anticipate C++0x's std::nullptr_t
 #endif // not BOOST_MSVC
 /// @}
 #include <CGAL/license/lgpl.h>
-
 
 #endif // CGAL_CONFIG_H

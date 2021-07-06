@@ -138,7 +138,7 @@ MainWindow::MainWindow()
   this->graphicsView->setMouseTracking(true);
 
   // Turn the vertical axis upside down
-  this->graphicsView->matrix().scale(1, -1);
+  this->graphicsView->transform().scale(1, -1);
 
   // The navigation adds zooming and translation functionality to the
   // QGraphicsView
@@ -275,7 +275,7 @@ MainWindow::open(QString fileName)
   if(fileName.endsWith(".wkt",Qt::CaseInsensitive))
   {
 #if BOOST_VERSION >= 105600 && (! defined(BOOST_GCC) || BOOST_GCC >= 40500)
-    CGAL::read_multi_point_WKT(ifs, points);
+    CGAL::IO::read_multi_point_WKT(ifs, points);
 #endif
   }
   else

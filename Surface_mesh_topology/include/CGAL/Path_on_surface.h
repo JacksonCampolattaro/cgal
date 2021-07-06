@@ -133,6 +133,10 @@ public:
     m_is_closed=false;
   }
 
+  /// @return true iff the prev index exists
+  bool prev_index_exists(std::size_t i) const
+  { return is_closed() || i>0; }
+
   /// @return true iff the next index exists
   bool next_index_exists(std::size_t i) const
   { return is_closed() || i<(m_path.size()-1); }
@@ -164,25 +168,25 @@ public:
   { return get_ith_dart(i); }
 
   /// @return the dart before the ith dart of the path,
-  ///          nullptr if such a dart does not exist.
+  ///          Map::null_handle if such a dart does not exist.
   Dart_const_handle get_prev_dart(std::size_t i) const
   {
     CGAL_assertion(i<m_path.size());
-    if (i==0 && !is_closed()) return nullptr;
+    if (i==0 && !is_closed()) return Map::null_handle;
     return m_path[prev_index(i)];
   }
 
   /// @return the dart after the ith dart of the path,
-  ///          nullptr if such a dart does not exist.
+  ///          Map::null_handle if such a dart does not exist.
   Dart_const_handle get_next_dart(std::size_t i) const
   {
     CGAL_assertion(i<m_path.size());
-    if (i==m_path.size()-1 && !is_closed()) return nullptr;
+    if (i==m_path.size()-1 && !is_closed()) return Map::null_handle;
     return m_path[next_index(i)];
   }
 
   /// @return the flip before the ith flip of the path,
-  ///          nullptr if such a flip does not exist.
+  ///          false if such a flip does not exist.
   bool get_prev_flip(std::size_t i) const
   {
     CGAL_assertion(i<m_path.size());
@@ -191,7 +195,7 @@ public:
   }
 
   /// @return the flip after the ith flip of the path,
-  ///          nullptr if such a flip does not exist.
+  ///          false if such a flip does not exist.
   bool get_next_flip(std::size_t i) const
   {
     CGAL_assertion(i<m_path.size());
@@ -322,7 +326,7 @@ public:
   bool can_be_pushed_by_label(const std::string& e, bool flip=false) const
   {
     Dart_const_handle dh=get_map().get_dart_labeled(e);
-    if (dh==nullptr) { return false; }
+    if (dh==Map::null_handle) { return false; }
     return can_be_pushed(dh, flip);
   }
 
@@ -334,7 +338,7 @@ public:
     for (std::string e; std::getline(iss, e, ' '); )
     {
       Dart_const_handle dh=get_map().get_dart_labeled(e);
-      if (dh!=nullptr) { push_back(dh, false, update_isclosed); }
+      if (dh!=Map::null_handle) { push_back(dh, false, update_isclosed); }
     }
   }
 
@@ -1095,6 +1099,39 @@ public:
     }
   }
 
+  /// @return the primitive root and the power of the path in the sense of string.
+  ///         use the linear Knuth-Morris-Pratt search
+  std::pair<Self, int> factorize() {
+    CGAL_assertion(is_valid());
+    if (!is_closed()) {
+      // if a path is not closed, it is already primitive
+      return std::make_pair(Path_on_surface<Map>(*this), 1);
+    }
+
+    Self pp1(*this);
+    pp1.simplify_flips();
+    Self pp2(pp1);
+    /// create a path of (*this)->(*this)
+    pp2 += pp1;
+
+    /// Match (*this) to (*this)->(*this) with the first dart removed
+    auto itMatch = boost::algorithm::knuth_morris_pratt_search(pp2.m_path.begin() + 1,
+                                                               pp2.m_path.end(),
+                                                               pp1.m_path.begin(),
+                                                               pp1.m_path.end())
+#if BOOST_VERSION>=106200
+      .first
+#endif
+      ;
+    /// It can be proved that the first match location is the length of match
+    auto primitiveSize = itMatch - pp2.m_path.begin();
+    auto originalLength = pp1.length();
+    CGAL_assertion(pp1.length() % primitiveSize == 0);
+    pp1.cut(primitiveSize);
+    CGAL_assertion(pp1.is_closed());
+    return std::make_pair(pp1, int(originalLength / primitiveSize));
+  }
+
   /// @return the turn between dart number i and dart number i+1.
   ///         (turn is position of the second edge in the cyclic ordering of
   ///          edges starting from the first edge around the second extremity
@@ -1127,6 +1164,23 @@ public:
 
     return m_map.positive_turn(get_opposite_ith_real_dart(next_index(i)),
                                get_opposite_ith_real_dart(i));
+  }
+
+  /// @return the turn between dart number i-1 and dart number i.
+  std::size_t prev_positive_turn(std::size_t i) const
+  {
+    // CGAL_assertion(is_valid());
+    CGAL_assertion(i<m_path.size());
+    CGAL_assertion (is_closed() || i>0);
+    return next_positive_turn(prev_index(i));
+  }
+  /// @return the negative turn between dart number i-1 and dart number i.
+  std::size_t prev_negative_turn(std::size_t i) const
+  {
+    // CGAL_assertion(is_valid());
+    CGAL_assertion(i<m_path.size());
+    CGAL_assertion (is_closed() || i>0);
+    return next_negative_turn(prev_index(i));
   }
 
   /// Computes all positive turns of this path.

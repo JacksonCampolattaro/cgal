@@ -22,7 +22,7 @@
 
 #include <CGAL/Arr_point_location/Trapezoidal_decomposition_2.h>
 #include <boost/variant.hpp>
-#include <boost/shared_ptr.hpp>
+#include <memory>
 
 
 #ifdef CGAL_TD_DEBUG
@@ -115,20 +115,20 @@ public:
 
   public:
     //c'tors
-    Data (boost::shared_ptr<X_monotone_curve_2>& _cv, Dag_node* _p_node)
+    Data (std::shared_ptr<X_monotone_curve_2>& _cv, Dag_node* _p_node)
        : cv(_cv), p_node(_p_node) //, lb(_lb),lt(_lt),rb(_rb),rt(_rt)
     { }
 
     ~Data() { }
 
   protected:
-    boost::shared_ptr<X_monotone_curve_2> cv;
+    std::shared_ptr<X_monotone_curve_2> cv;
     Dag_node* p_node;
   };
 
  private:
 
-  Data* ptr() const { return (Data*)(PTR.p);  }
+  Data* ptr() const { return (Data*)(PTR);  }
 
 
 #ifndef CGAL_TD_DEBUG
@@ -148,7 +148,7 @@ public:
   }
 
   /*! Set the x_monotone_curve_2 for removed edge degenerate trapezoid. */
-  CGAL_TD_INLINE void set_curve(boost::shared_ptr<X_monotone_curve_2>& cv)
+  CGAL_TD_INLINE void set_curve(std::shared_ptr<X_monotone_curve_2>& cv)
   {
     ptr()->cv = cv;
   }
@@ -159,9 +159,9 @@ public:
   //@{
 
   /*! Constructor given Vertex & Halfedge handles. */
-  Td_inactive_edge (boost::shared_ptr<X_monotone_curve_2>& cv, Dag_node* node = nullptr)
+  Td_inactive_edge (std::shared_ptr<X_monotone_curve_2>& cv, Dag_node* node = nullptr)
   {
-    PTR.p = new Data(cv,node);
+    PTR = new Data(cv,node);
   }
 
   /*! Copy constructor. */
@@ -215,7 +215,7 @@ public:
   /*! Access the trapezoid id (PTR). */
   inline unsigned long id() const
   {
-    return (unsigned long) PTR.p;
+    return (unsigned long) PTR;
   }
 
   inline X_monotone_curve_2& curve() const

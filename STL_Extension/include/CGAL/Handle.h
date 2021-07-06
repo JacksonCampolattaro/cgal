@@ -25,13 +25,17 @@ namespace CGAL {
 
 class Rep
 {
-    friend class Handle;
-  protected:
-             Rep() { count = 1; }
-    virtual ~Rep() {}
+  friend class Handle;
+protected:
+  Rep() { count = 1; }
+  Rep(int count)
+    : count(count)
+  {}
+  virtual ~Rep() {}
 
-    int      count;
+  int count;
 };
+
 
 class Handle
 {
@@ -40,31 +44,43 @@ class Handle
     typedef std::ptrdiff_t Id_type ;
 
     Handle() noexcept
-        : PTR{static_cast<Rep*>(0)} {}
+        : PTR(static_cast<Rep*>(0)) {}
 
-    // FIXME: if the precondition throws in a noexcept function, the program terminates
-    Handle(const Handle& x) noexcept
+    Handle(const Handle& x) noexcept(!(CGAL_PRECONDITIONS_ENABLED || CGAL_ASSERTIONS_ENABLED))
     {
-      CGAL_precondition( x.PTR.p != static_cast<Rep*>(0) );
-      PTR.p = x.PTR.p;
-      CGAL_assume (PTR.p->count > 0);
-      PTR.p->count++;
+      CGAL_precondition( x.PTR != static_cast<Rep*>(0) );
+      PTR = x.PTR;
+      CGAL_assume (PTR->count > 0);
+      PTR->count++;
+    }
+
+    Handle(Handle&& x) noexcept
+      : PTR(x.PTR)
+    {
+      x.PTR = static_cast<Rep*>(0);
     }
 
     ~Handle()
     {
-        if ( PTR.p && (--PTR.p->count == 0))
-            delete PTR.p;
+        if ( PTR && (--PTR->count == 0))
+            delete PTR;
     }
 
     Handle&
-    operator=(const Handle& x) noexcept
+    operator=(const Handle& x) noexcept(!CGAL_PRECONDITIONS_ENABLED)
     {
-      CGAL_precondition( x.PTR.p != static_cast<Rep*>(0) );
-      x.PTR.p->count++;
-      if ( PTR.p && (--PTR.p->count == 0))
-          delete PTR.p;
-      PTR.p = x.PTR.p;
+      CGAL_precondition( x.PTR != static_cast<Rep*>(0) );
+      x.PTR->count++;
+      if ( PTR && (--PTR->count == 0))
+          delete PTR;
+      PTR = x.PTR;
+      return *this;
+    }
+
+    Handle&
+    operator=(Handle&& x) noexcept
+    {
+      swap(*this,x);
       return *this;
     }
 
@@ -72,29 +88,25 @@ class Handle
 
     void reset()
     {
-      if (PTR.p)
+      if (PTR)
       {
-        if (--PTR.p->count==0)
-          delete PTR.p;
-        PTR.p=0;
+        if (--PTR->count==0)
+          delete PTR;
+        PTR=0;
       }
     }
 
-    int refs()  const noexcept { return PTR.p->count; }
+    int
+    refs()  const noexcept { return PTR->count; }
 
-    Id_type id() const noexcept { return PTR.p - static_cast<Rep*>(0); }
+    Id_type id() const noexcept { return PTR - static_cast<Rep*>(0); }
 
-    bool identical(const Handle& h) const noexcept { return PTR.p == h.PTR.p; }
+    bool identical(const Handle& h) const noexcept { return PTR == h.PTR; }
 
-    void*  for_compact_container() const { return PTR.vp; }
-    void*& for_compact_container() { return PTR.vp; }
-
+    void * for_compact_container() const { return PTR; }
+    void for_compact_container(void* p) { PTR = static_cast<Rep*>(p); }
   protected:
-
-  union {
-    Rep* p;
-    void* vp;
-  } PTR;
+    Rep* PTR;
 };
 
 //inline Handle::Id_type id(const Handle& x) { return x.id() ; }
