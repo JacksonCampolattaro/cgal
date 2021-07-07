@@ -123,12 +123,11 @@ namespace CGAL {
               bool bounded_1,
               bool use_static_filters>
       inline
-      typename Do_intersect_bbox_segment_aux_is_greater
-              <
-                      FT,
-                      bounded_0,
-                      use_static_filters
-              >::result_type
+      typename Do_intersect_bbox_segment_aux_is_greater<
+              FT,
+              bounded_0,
+              use_static_filters
+      >::result_type
       do_intersect_bbox_segment_aux_old(
               const FT &px, const FT &py, const FT &pz,
               const FT &qx, const FT &qy, const FT &qz,
@@ -446,12 +445,11 @@ namespace CGAL {
               bool bounded_1,
               bool use_static_filters>
       inline
-      typename Do_intersect_bbox_segment_aux_is_greater
-              <
-                      FT,
-                      bounded_0,
-                      use_static_filters
-              >::result_type
+      typename Do_intersect_bbox_segment_aux_is_greater<
+              FT,
+              bounded_0,
+              use_static_filters
+      >::result_type
       do_intersect_bbox_segment_aux(
               const FT &px, const FT &py, const FT &pz,
               const FT &qx, const FT &qy, const FT &qz,
@@ -515,12 +513,11 @@ namespace CGAL {
               bool bounded_1,
               bool use_static_filters>
       inline
-      typename Do_intersect_bbox_segment_aux_is_greater
-              <
-                      FT,
-                      bounded_0,
-                      use_static_filters
-              >::result_type
+      typename Do_intersect_bbox_segment_aux_is_greater<
+              FT,
+              bounded_0,
+              use_static_filters
+      >::result_type
       do_intersect_bbox_segment_aux(
               const FT &px, const FT &py, const FT &pz,
               const FT &qx, const FT &qy, const FT &qz,
