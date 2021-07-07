@@ -190,14 +190,11 @@ inline
 bool
 do_overlap(const Bbox_3& bb1, const Bbox_3& bb2)
 {
-    // check for emptiness ??
-    if (bb1.xmax() < bb2.xmin() || bb2.xmax() < bb1.xmin())
-        return false;
-    if (bb1.ymax() < bb2.ymin() || bb2.ymax() < bb1.ymin())
-        return false;
-    if (bb1.zmax() < bb2.zmin() || bb2.zmax() < bb1.zmin())
-        return false;
-    return true;
+  // Return false if any axis doesn't have an overlap
+  // TODO this is adapted from the old code, I'd like to negate the logic to make it more intuitive
+  return !(bb1.xmax() < bb2.xmin() || bb2.xmax() < bb1.xmin()) &&
+         !(bb1.ymax() < bb2.ymin() || bb2.ymax() < bb1.ymin()) &&
+         !(bb1.zmax() < bb2.zmin() || bb2.zmax() < bb1.zmin());
 }
 
 
