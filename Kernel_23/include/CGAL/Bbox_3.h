@@ -191,9 +191,9 @@ bool
 do_overlap(const Bbox_3& bb1, const Bbox_3& bb2)
 {
   // Only return true if there's overlap on every axis
-  return (bb1.xmin() <= bb2.xmax() || bb2.xmin() <= bb1.xmax()) && // Overlap on x
-         (bb1.ymin() <= bb2.ymax() || bb2.ymin() <= bb1.ymax()) && // Overlap on y
-         (bb1.zmin() <= bb2.zmax() || bb2.zmin() <= bb1.zmax());   // Overlap on z
+  return !(bb1.xmax() < bb2.xmin() || bb2.xmax() < bb1.xmin()) && // No overlap on x
+         !(bb1.ymax() < bb2.ymin() || bb2.ymax() < bb1.ymin()) && // No overlap on y
+         !(bb1.zmax() < bb2.zmin() || bb2.zmax() < bb1.zmin());   // No overlap on z
 }
 
 
