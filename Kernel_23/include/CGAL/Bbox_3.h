@@ -186,18 +186,14 @@ Bbox_3::dilate(int dist)
 }
 
 
+inline
 bool
 do_overlap(const Bbox_3& bb1, const Bbox_3& bb2)
 {
-  // Determine how much overlap exists in each axis
-  double x_overlap = std::min(bb1.xmax(), bb2.xmax()) - std::max(bb1.xmin(), bb2.xmin());
-  double y_overlap = std::min(bb1.ymax(), bb2.ymax()) - std::max(bb1.ymin(), bb2.ymin());
-  double z_overlap = std::min(bb1.zmax(), bb2.zmax()) - std::max(bb1.zmin(), bb2.zmin());
-
   // Only return true if there's overlap on every axis
-  return x_overlap >= 0 &&
-         y_overlap >= 0 &&
-         z_overlap >= 0;
+  return !(bb1.xmax() < bb2.xmin() | bb2.xmax() < bb1.xmin()) & // No overlap on x
+         !(bb1.ymax() < bb2.ymin() | bb2.ymax() < bb1.ymin()) & // No overlap on y
+         !(bb1.zmax() < bb2.zmin() | bb2.zmax() < bb1.zmin());  // No overlap on z
 }
 
 

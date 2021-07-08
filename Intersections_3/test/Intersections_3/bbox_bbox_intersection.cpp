@@ -11,6 +11,7 @@ int main() {
   CGAL::Bbox_3 b{7, 8, 9,
                  10, 11, 12};
 
+  std::cout << CGAL::do_intersect(a, b);
   CGAL_assertion_msg(!CGAL::do_intersect(a, b), "Bbox a and b should not intersect");
 
   // Bounding boxes that do intersect
