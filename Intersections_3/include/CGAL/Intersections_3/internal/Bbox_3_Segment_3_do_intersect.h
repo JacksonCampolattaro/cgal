@@ -439,12 +439,13 @@ namespace CGAL {
         return true;
       }
 
-      template<typename FT,
+      template<
+              typename FT,
               typename BFT,
               bool bounded_0,
               bool bounded_1,
-              bool use_static_filters>
-      inline
+              bool use_static_filters
+      >
       typename Do_intersect_bbox_segment_aux_is_greater<
               FT,
               bounded_0,
@@ -478,9 +479,9 @@ namespace CGAL {
 
         // The ray intercepts if this region overlaps with the interval provided
         Uncertain<bool> new_result =
-                (max >= min) &&            // Check if there is any overlap at all
-                !(bounded_0 && max < 0) && // Check if the overlap is outside the ray (before the start)
-                !(bounded_1 && min > 1);   // Check if the overlap is outside the ray (after the end)
+                (max >= min) &            // Check if there is any overlap at all
+                !(bounded_0 && max < 0) & // Check if the overlap is outside the ray (before the start)
+                !(bounded_1 && min > 1);  // Check if the overlap is outside the ray (after the end)
 
 //        // Calculate the result using the old approach
 //        auto old_result = do_intersect_bbox_segment_aux_old<FT, BFT, bounded_0, bounded_1, use_static_filters>(
