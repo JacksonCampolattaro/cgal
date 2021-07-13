@@ -515,6 +515,10 @@ public:
     template <class Query, class Traversal_traits>
     void traversal(const Query& query, Traversal_traits& traits) const
     {
+#ifdef FANOUT_4
+      return traversal4(query, traits);
+#else
+
       switch(size())
       {
       case 0:
@@ -525,7 +529,9 @@ public:
       default: // if(size() >= 2)
         root_node()->template traversal<Traversal_traits,Query>(query, traits, m_primitives.size());
       }
+#endif
     }
+
 #ifdef FANOUT_4
     /// \internal
     template <class Query, class Traversal_traits>

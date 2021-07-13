@@ -68,10 +68,12 @@ public:
                  Traversal_traits& traits,
                  const std::size_t nb_primitives) const;
 
+#ifdef FANOUT_4
   template<class Traversal_traits, class Query>
   void traversal4(const Query& query,
                   Traversal_traits& traits,
                   const std::size_t nb_primitives) const;
+#endif
 
 private:
   typedef AABBTraits AABB_traits;
@@ -169,6 +171,12 @@ AABB_node<Tr>::traversal4(const Query& query,
     bool cont = true;
     bool leftleft, leftright, rightleft, rightright;
     traits.do_intersect(query, *this, leftleft, leftright, rightleft, rightright); // this uses xsimd
+
+//    leftleft =  traits.do_intersect(query, this->left_child().left_child());
+//    leftright =  traits.do_intersect(query, this->left_child().right_child());
+//    rightleft =  traits.do_intersect(query, this->right_child().left_child());
+//    rightright =  traits.do_intersect(query, this->right_child().right_child());
+
     if(leftleft){
       left_child().left_child().traversal4(query, traits, nb_primitives/4);
       cont = traits.go_further();

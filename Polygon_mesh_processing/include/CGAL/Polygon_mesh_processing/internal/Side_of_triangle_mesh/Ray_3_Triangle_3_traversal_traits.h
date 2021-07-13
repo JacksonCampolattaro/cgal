@@ -76,6 +76,19 @@ public:
   {
     return m_aabb_traits.do_intersect_object()(query, m_helper.get_node_bbox(node));
   }
+
+#ifdef FANOUT_4
+  template<class Query>
+  void do_intersect(const Query& query, const Node& node, bool& leftleft, bool& leftright, bool& rightleft, bool& rightright) const
+  {
+    std::cout << "Testing 4 grand children" << std::endl;
+    leftleft =  m_aabb_traits.do_intersect_object()(query, node.left_child().left_child().bbox());
+    leftright =  m_aabb_traits.do_intersect_object()(query, node.left_child().right_child().bbox());
+    rightleft =  m_aabb_traits.do_intersect_object()(query, node.right_child().left_child().bbox());
+    rightright =  m_aabb_traits.do_intersect_object()(query, node.right_child().right_child().bbox());
+  }
+#endif
+
 };
 
 
@@ -115,6 +128,18 @@ public:
   {
     return do_intersect(query,this->m_helper.get_node_bbox(node));
   }
+
+#ifdef FANOUT_4
+    template<class Query>
+    void do_intersect(const Query& query, const Node& node, bool& leftleft, bool& leftright, bool& rightleft, bool& rightright) const
+    {
+      std::cout << "Testing 4 grand children" << std::endl;
+      leftleft =  do_intersect(query, node.left_child().left_child().bbox());
+      leftright =  do_intersect(query, node.left_child().right_child().bbox());
+      rightleft =  do_intersect(query, node.right_child().left_child().bbox());
+      rightright =  do_intersect(query, node.right_child().right_child().bbox());
+    }
+#endif
 
 private:
   typename Kernel::Point_2 x_project(const typename Kernel::Point_3& p) const{
