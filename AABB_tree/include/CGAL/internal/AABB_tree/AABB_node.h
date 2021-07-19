@@ -129,6 +129,7 @@ namespace CGAL {
   AABB_node<Tr>::traversal(const Query &query,
                            Traversal_traits &traits,
                            const std::size_t nb_primitives) const {
+    if (!traits.go_further()) return;
 
     // This is a Depth-first traversal
 
@@ -139,10 +140,15 @@ namespace CGAL {
 
     } else {
 
-      // Otherwise, recursively search the child nodes
-      for (const auto &child : children()){
-        if (traits.go_further() && traits.do_intersect(query, child))
-          child.traversal(query, traits, num_primitives(child, nb_primitives));
+      // Determine whether each child intersects
+      std::array<bool, N> intersections{false};
+      for (size_t i = 0; i < N; ++i)
+        intersections[i] = traits.do_intersect(query, children()[i]);
+
+      // Recursively check each child that intersected
+      for (size_t i = 0; i < N; ++i) {
+        if (intersections[i])
+          children()[i].traversal(query, traits, num_primitives(i, nb_primitives));
       }
     }
   }
