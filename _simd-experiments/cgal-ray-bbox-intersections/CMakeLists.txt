@@ -4,6 +4,8 @@
 cmake_minimum_required(VERSION 3.1...3.20)
 project(cgal-ray-bbox-intersections)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -march=native")
+
 find_package(CGAL REQUIRED)
 
 # create a target per cppfile

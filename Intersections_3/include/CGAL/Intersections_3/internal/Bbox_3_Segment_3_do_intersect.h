@@ -116,7 +116,6 @@ namespace CGAL {
 
       }; // end specialization Do_intersect_bbox_segment_aux_is_greater<FT, true>
 
-
       template<typename FT,
               typename BFT,
               bool bounded_0,

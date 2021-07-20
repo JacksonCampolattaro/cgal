@@ -18,9 +18,10 @@ bool __attribute__((noinline)) single_intersection(const Ray_3 &ray, const Bbox_
 
 template<std::size_t N>
 std::array<bool, N> __attribute__((noinline)) __attribute__((flatten)) loop_intersection(const Ray_3 &ray, const std::array<Bbox_3, N> &boxes) {
-  std::array<bool, N> results{false};
+  std::array<bool, N> results{};
+  #pragma omp for simd
   for (std::size_t i = 0; i < N; ++i) {
-    results[i] = CGAL::do_intersect(ray, boxes[i]);
+    results[i] = single_intersection(ray, boxes[i]);
   }
   return results;
 }
@@ -90,12 +91,27 @@ std::array<bool, N> __attribute__((noinline)) xsimd_intersection(const Ray_3 &ra
   return result_array;
 }
 
+#pragma omp declare simd uniform(ray) linear(ref(bbox))
+bool __attribute__((flatten)) openmp_intersection(const Ray_3 &ray, const Bbox_3 &bbox) {
+  return CGAL::do_intersect(ray, bbox);
+}
+
+template<std::size_t N>
+std::array<bool, N> __attribute__((noinline)) openmp_intersection(const Ray_3 &ray, const std::array<Bbox_3, N> &boxes) {
+  std::array<bool, N> results{};
+  #pragma omp simd
+  for (std::size_t i = 0; i < N; ++i) {
+    results[i] = openmp_intersection(ray, boxes[i]);
+  }
+  return results;
+}
+
 int main() {
 
   Bbox_3 box{0, 0, 0, 1, 1, 1};
   Ray_3 ray{};
 
-  std::array<Bbox_3, 2> boxes{box, box};
+  std::array<Bbox_3, 4> boxes{box, box, box, box};
 
   std::cout << single_intersection(ray, box) << std::endl;
 
@@ -103,6 +119,9 @@ int main() {
   std::cout << std::endl;
 
   for (auto r : xsimd_intersection(ray, boxes)) std::cout << r;
+  std::cout << std::endl;
+
+  for (auto r : openmp_intersection(ray, boxes)) std::cout << r;
   std::cout << std::endl;
 
   for (auto b : boxes) std::cout << b << std::endl;
